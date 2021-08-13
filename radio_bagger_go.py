@@ -16,11 +16,9 @@ current_frequency = MIN_FREQUENCY
 
 
 def shutdown():
-    try:
-        os.killpg(os.getpgid(audio_thread.pid), signal.SIGTERM)
-    except AttributeError:
-        return
-    display.fill(0)
+    global do_broadcast
+    do_broadcast = False
+    print_yeet()
     blueLed.off()
     greenLed.off()
 
@@ -83,11 +81,9 @@ enc.when_rotated = print_frequency
 
 def enc_pressed():
     if blueButton.is_pressed:
-        display.fill(0)
+        clear_screen()
         bagger()
-        for _ in range(4):
-            display.print(' ')
-            time.sleep(0.3)
+        clear_display()
         print_frequency()
     else:
         pass
@@ -166,15 +162,45 @@ def calc_speed():
     return 0.3
 
 
-def print_scan():
+def clear_screen():
     display.fill(0)
+    for _ in range(4):
+        display.print(' ')
+    time.sleep(0.3)
+
+
+def print_scan():
+    clear_screen()
+    display.set_digit_raw(3, 0b1101101)
+    time.sleep(calc_speed())
+    display.scroll()
+    display.set_digit_raw(3, 0b0111001)
+    time.sleep(calc_speed())
+    display.scroll()
+    display.set_digit_raw(3, 0b1110111)
+    time.sleep(calc_speed())
+    display.scroll()
+    display.set_digit_raw(3, 0b1010100)
+    time.sleep(calc_speed())
 
 
 def print_yeet():
-    display.fill(0)
+    clear_screen()
+    display.set_digit_raw(3, 0b1101110)
+    time.sleep(calc_speed())
+    display.scroll()
+    display.set_digit_raw(3, 0b1111001)
+    time.sleep(calc_speed())
+    display.scroll()
+    display.set_digit_raw(3, 0b1111001)
+    time.sleep(calc_speed())
+    display.scroll()
+    display.set_digit_raw(3, 0b1111000)
+    time.sleep(calc_speed())
 
 
 def bagger():
+    clear_screen()
     display.print('B')
     time.sleep(calc_speed())
     display.print('A')
