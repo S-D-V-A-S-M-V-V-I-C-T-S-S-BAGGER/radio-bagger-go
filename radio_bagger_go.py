@@ -120,12 +120,12 @@ def broadcast_loop():
     global do_broadcast
     global audio_thread
     global current_frequency
-    if do_broadcast:
-        print(str(current_frequency)[-1:] + '.' + str(current_frequency)[:-1])
-        audio_thread = subprocess.Popen([
-            f"/usr/bin/arecord -Ddefault -f cd | sudo /home/pi/radio-bagger-go/pi_fm_rds -freq {str(current_frequency)[:-1] + '.' + str(current_frequency)[-1:]} -pi A420 -ps BAGGERGO -rt 'Radio BAGGER on the go' -audio -"],
-            preexec_fn=os.setsid, shell=True)
-        audio_thread.communicate()
+    while True:
+        if do_broadcast:
+            audio_thread = subprocess.Popen([
+                f"/usr/bin/arecord -Ddefault -f cd | sudo /home/pi/radio-bagger-go/pi_fm_rds -freq {str(current_frequency)[:-1] + '.' + str(current_frequency)[-1:]} -pi A420 -ps BAGGERGO -rt 'Radio BAGGER on the go' -audio -"],
+                preexec_fn=os.setsid, shell=True)
+            audio_thread.communicate()
 
 
 def green_released():
