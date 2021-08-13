@@ -111,8 +111,9 @@ def start_new_pair():
 
 
 def green_pressed():
+    global do_broadcast
+    do_broadcast = True
     greenLed.on()
-    threading.Thread(target=broadcast).start()
 
 
 def broadcast_loop():
