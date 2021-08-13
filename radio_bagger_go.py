@@ -1,6 +1,5 @@
 import atexit
 import os
-import signal
 import subprocess
 import threading
 import time
@@ -13,17 +12,8 @@ from gpiozero import RotaryEncoder, Button, LED, PWMLED, OutputDevice
 MIN_FREQUENCY = 87
 MAX_FREQUENCY = 108
 current_frequency = MIN_FREQUENCY
-
-
-def shutdown():
-    global do_broadcast
-    do_broadcast = False
-    print_yeet()
-    blueLed.off()
-    greenLed.off()
-
-
-atexit.register(shutdown)
+do_broadcast = False
+audio_thread = None
 
 # Monitor encoder
 enc = RotaryEncoder(26, 19, max_steps=int((MAX_FREQUENCY - MIN_FREQUENCY) * 5), wrap=True)
@@ -120,36 +110,25 @@ def start_new_pair():
     subprocess.run(['sudo', '/usr/bin/hciconfig', 'hci0', 'piscan'])
 
 
-do_broadcast = False
-
-
 def green_pressed():
     greenLed.on()
     threading.Thread(target=broadcast).start()
 
 
-def broadcast():
-    global current_frequency
+def broadcast_loop():
     global do_broadcast
-    do_broadcast = True
-    print(str(current_frequency)[-1:] + '.' + str(current_frequency)[:-1])
-    audio_thread = subprocess.Popen([
-        f"/usr/bin/arecord -Ddefault -f cd | sudo /home/pi/radio-bagger-go/pi_fm_rds -freq {str(current_frequency)[:-1] + '.' + str(current_frequency)[-1:]} -pi A420 -ps BAGGERGO -rt 'Radio BAGGER on the go' -audio -"],
-        preexec_fn=os.setsid, shell=True)
-    audio_thread.communicate()
-
-    while do_broadcast:
-        pass
-
-    try:
-        os.killpg(os.getpgid(audio_thread.pid), signal.SIGTERM)
-    except AttributeError:
-        return
+    global audio_thread
+    global current_frequency
+    if do_broadcast:
+        print(str(current_frequency)[-1:] + '.' + str(current_frequency)[:-1])
+        audio_thread = subprocess.Popen([
+            f"/usr/bin/arecord -Ddefault -f cd | sudo /home/pi/radio-bagger-go/pi_fm_rds -freq {str(current_frequency)[:-1] + '.' + str(current_frequency)[-1:]} -pi A420 -ps BAGGERGO -rt 'Radio BAGGER on the go' -audio -"],
+            preexec_fn=os.setsid, shell=True)
+        audio_thread.communicate()
 
 
 def green_released():
-    global do_broadcast
-    do_broadcast = False
+    kill_broadcast()
     greenLed.off()
 
 
@@ -218,6 +197,27 @@ def bagger():
     time.sleep(calc_speed())
 
 
+def kill_broadcast():
+    global do_broadcast
+    global audio_thread
+    do_broadcast = False
+    try:
+        os.killpg(os.getpgid(audio_thread.pid), signal.SIGTERM)
+    except AttributeError:
+        return
+
+
+def shutdown():
+    kill_broadcast()
+    print_yeet()
+    blueLed.off()
+    greenLed.off()
+
+
+atexit.register(shutdown)
+
+# Initial startup
+threading.Thread(target=broadcast_loop).start()
 # Keep the program alive
 while True:
     time.sleep(1)
