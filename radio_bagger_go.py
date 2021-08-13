@@ -138,7 +138,7 @@ def broadcast():
     do_broadcast = True
     print(str(current_frequency)[-1:] + '.' + str(current_frequency)[:-1])
     audio_thread = subprocess.Popen([
-        f"/usr/bin/arecord -Ddefault | sudo /home/pi/radio-bagger-go/pi_fm_rds -freq {str(current_frequency)[:-1] + '.' + str(current_frequency)[-1:]} -pi A420 -ps BAGGERGO -rt 'Radio BAGGER on the go' -audio -"],
+        f"/usr/bin/arecord -Ddefault -f cd | sudo /home/pi/radio-bagger-go/pi_fm_rds -freq {str(current_frequency)[:-1] + '.' + str(current_frequency)[-1:]} -pi A420 -ps BAGGERGO -rt 'Radio BAGGER on the go' -audio -"],
         preexec_fn=os.setsid, shell=True)
     audio_thread.communicate()
 
