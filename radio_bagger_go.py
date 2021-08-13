@@ -2,7 +2,7 @@ import atexit
 import os
 import signal
 import subprocess
-# import threading
+import threading
 import time
 
 import board
@@ -124,32 +124,37 @@ def start_new_pair():
     subprocess.run(['sudo', '/usr/bin/hciconfig', 'hci0', 'piscan'])
 
 
-audio_thread = None
+do_broadcast = False
 
 
 def green_pressed():
     greenLed.on()
-    broadcast()
-    # threading.Thread(target=broadcast).start()
+    threading.Thread(target=broadcast).start()
 
 
 def broadcast():
-    global audio_thread
     global current_frequency
+    global do_broadcast
+    do_broadcast = True
     print(str(current_frequency)[-1:] + '.' + str(current_frequency)[:-1])
     audio_thread = subprocess.Popen([
         f"/usr/bin/arecord -Ddefault | sudo /home/pi/radio-bagger-go/pi_fm_rds -freq {str(current_frequency)[:-1] + '.' + str(current_frequency)[-1:]} -pi A420 -ps BAGGERGO -rt 'Radio BAGGER on the go' -audio -"],
         preexec_fn=os.setsid, shell=True)
     audio_thread.communicate()
 
+    while do_broadcast:
+        pass
 
-def green_released():
-    greenLed.off()
-    global audio_thread
     try:
         os.killpg(os.getpgid(audio_thread.pid), signal.SIGTERM)
     except AttributeError:
         return
+
+
+def green_released():
+    global do_broadcast
+    do_broadcast = False
+    greenLed.off()
 
 
 greenButton.when_pressed = green_pressed
