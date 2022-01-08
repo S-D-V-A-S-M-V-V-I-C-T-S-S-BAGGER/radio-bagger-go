@@ -3,7 +3,7 @@ import os
 import subprocess
 import threading
 import time
-
+import signal
 import board
 import busio
 from adafruit_ht16k33 import segments
@@ -11,9 +11,10 @@ from gpiozero import RotaryEncoder, Button, LED, PWMLED, OutputDevice
 
 MIN_FREQUENCY = 87
 MAX_FREQUENCY = 108
-current_frequency = MIN_FREQUENCY
+current_frequency = 106.7
 do_broadcast = False
 audio_thread = None
+fileDirectory = os.path.dirname(os.path.realpath(__file__))
 
 # Monitor encoder
 enc = RotaryEncoder(26, 19, max_steps=int((MAX_FREQUENCY - MIN_FREQUENCY) * 5), wrap=True)
@@ -39,7 +40,6 @@ i2c = busio.I2C(board.SCL, board.SDA)
 display = segments.Seg7x4(i2c)
 # display.blink_rate = 0
 display.brightness = 1
-
 
 # Read the position of the encoder and display it as a frequency
 def print_frequency():
@@ -94,11 +94,15 @@ encButton.when_released = enc_released
 
 def blue_pressed():
     blueLed.blink(off_time=0.2, fade_in_time=0.2, fade_out_time=0.2)
-    start_new_pair()
+    print_scan()
+    # auto-pair and expect files all "borrowed" from https://circuitdigest.com/microcontroller-projects/diy-raspberry-pi-bluetooth-speaker
+    output = subprocess.call(["/bin/bash",fileDirectory+"/pair_and_trust_bluetooth_device.sh", ">>", fileDirectory+"/bluetoothSpeaker.log"])
+    blueLed.off()
+    print_yeet()
 
 
 def blue_released():
-    #  blueLed.off()
+#    blueLed.off()
     pass
 
 
@@ -106,8 +110,8 @@ blueButton.when_pressed = blue_pressed
 blueButton.when_released = blue_released
 
 
-def start_new_pair():
-    subprocess.run(['sudo', '/usr/bin/hciconfig', 'hci0', 'piscan'])
+#def start_new_pair():
+#    subprocess.run(['sudo', '/usr/bin/hciconfig', 'hci0', 'piscan'])
 
 
 def green_pressed():
@@ -123,7 +127,7 @@ def broadcast_loop():
     while True:
         if do_broadcast:
             audio_thread = subprocess.Popen([
-                f"/usr/bin/arecord -Ddefault -f cd | sudo /home/pi/radio-bagger-go/pi_fm_rds -freq {str(current_frequency)[:-1] + '.' + str(current_frequency)[-1:]} -pi A420 -ps BAGGERGO -rt 'Radio BAGGER on the go' -audio -"],
+                f"/usr/bin/arecord -D pulse -f cd | sudo /opt/pi_fm_rds -freq {str(current_frequency)[:-1] + '.' + str(current_frequency)[-1:]} -pi A420 -ps BAGGERGO -rt 'Radio BAGGER on the go' -audio -"],
                 preexec_fn=os.setsid, shell=True)
             audio_thread.communicate()
 
@@ -216,9 +220,5 @@ def shutdown():
 
 
 atexit.register(shutdown)
-
 # Initial startup
 threading.Thread(target=broadcast_loop).start()
-# Keep the program alive
-while True:
-    time.sleep(1)
